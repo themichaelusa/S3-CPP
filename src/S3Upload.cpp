@@ -47,11 +47,11 @@ S3EncryptionClient* S3Upload::configEncryptionClient(const string *master){
     return new S3EncryptionClient(kmsMaterials, cryptoConfiguration, credentials);
 }
 
-bool S3Upload::use_api(string* (*file_op) (const string*, string), const string* filename, const string key){
+bool S3Upload::_use_api(string* (*file_op) (const string*, const string*), const string* filename, const string* key){
     Aws::InitAPI(_options);
     {
         string* requestResult = file_op(filename, key);
-        if (strcmp(requestResult->c_str(), "") == 0) {
+        if (strcmp(requestResult->c_str(), SUCCESSFUL_REQUEST.c_str()) == 0) {
             cout << *requestResult << endl;
         } else {
             cout<<"AWS S3 Request Successful"<<endl;
@@ -62,17 +62,18 @@ bool S3Upload::use_api(string* (*file_op) (const string*, string), const string*
     Aws::ShutdownAPI(_options);
 }
 
-bool S3Upload::download_file(const string* filename, const string key) {
-    return use_api(&_download_file, filename, key);
+bool S3Upload::download_file(const string* filename, const string* key) {
+    return _use_api(&_download_file, filename, key);
 }
 
-bool S3Upload::upload_file(const string* filename, const string key) {
-    return use_api(&_upload_file, filename, key);
+bool S3Upload::upload_file(const string* filename, const string* key) {
+    return _use_api(&_upload_file, filename, key);
 }
 
-string* S3Upload::_upload_file(const string *filename, string key) {
+string* S3Upload::_upload_file(const string* filename, const string* key) {
     Aws::S3::Model::PutObjectRequest r;
-    r.WithBucket(_BUCKET->c_str()).WithKey(key);
+    r.WithBucket(_BUCKET->c_str());
+    r.WithKey(key->c_str());
 
     // Note: Binary files must also have the std::ios_base::bin flag or'ed in
     auto input_data = Aws::MakeShared<Aws::FStream>("PutObjectInputStream",
@@ -95,15 +96,16 @@ string* S3Upload::_upload_file(const string *filename, string key) {
     }
 }
 
-string* S3Upload::_download_file(const string *filename, string key) {
+string* S3Upload::_download_file(const string *filename, const string* key) {
     Aws::S3::Model::GetObjectRequest r;
-    r.WithBucket(_BUCKET->c_str()).WithKey(key);
+    r.WithBucket(_BUCKET->c_str());
+    r.WithKey(key->c_str());
     GetObjectOutcome o = _encryptionClient->GetObject(r);
     delete filename;
 
     if (o.IsSuccess()){
         Aws::OFStream local_file;
-        local_file.open(key.c_str(), std::ios::out | std::ios::binary);
+        local_file.open(key->c_str(), std::ios::out | std::ios::binary);
         local_file << o.GetResult().GetBody().rdbuf();
         return new string("");
     }

@@ -1,0 +1,10 @@
+
+.DS_Store
+*.cmake
+*.txt
+*.bin
+*.out
+*.check_cache
+*.log
+*.marks
+*.cbp
