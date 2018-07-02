@@ -2,19 +2,16 @@
 // Created by Michael Usachenko on 6/29/18.
 //
 
-//using namespace Aws;
-//using namespace Aws::S3;
-//using namespace Aws::S3::Model;
-//using namespace Aws::S3Encryption;
-//using namespace Aws::S3Encryption::Materials;
 using namespace std;
 
 #include <aws/core/Aws.h>
 #include <aws/s3/S3Client.h>
+
 #include <aws/s3-encryption/S3EncryptionClient.h>
 #include <aws/s3/model/GetObjectRequest.h>
 #include <aws/s3/model/PutObjectRequest.h>
 #include <aws/s3/model/DeleteObjectRequest.h>
+#include <aws/core/utils/Outcome.h>
 
 #include <aws/s3-encryption/CryptoConfiguration.h>
 #include <aws/s3-encryption/materials/KMSEncryptionMaterials.h>
@@ -105,6 +102,7 @@ bool S3Upload::remove(const string& key) {
 
 // PRIVATE S3 ACCESS HELPERS
 bool S3Upload::_use_api(int op, const string* path_or_stream, const string* key){
+    bool result;
     Aws::InitAPI(_options);
     {
         string* requestResult;
@@ -121,15 +119,34 @@ bool S3Upload::_use_api(int op, const string* path_or_stream, const string* key)
             requestResult = _remove_file(key);
         }
 
-        if (strcmp(requestResult->c_str(), _SUCCESSFUL_REQUEST.c_str()) == 0) {
-            cout << *requestResult << endl;
-        } else {
+        if (_successful_s3_request(requestResult)) {
+            result = true;
             cout<<"AWS S3 Request Successful"<<endl;
+        } else {
+            result = false;
+            cout << *requestResult << endl;
         }
 
         //TODO: Log requests, inform mailing/text list if fail
+        delete requestResult;
     }
     Aws::ShutdownAPI(_options);
+    return result;
+}
+
+inline bool S3Upload::_successful_s3_request(const string *requestResult) {
+    return strcmp(requestResult->c_str(), _SUCCESSFUL_REQUEST.c_str()) == 0;
+}
+
+inline string* S3Upload::_get_s3_request_errors(Aws::Utils::Outcome request_outcome) {
+    if (request_outcome.IsSuccess()){
+        return new string(_SUCCESSFUL_REQUEST);
+    }
+    else {
+        stringstream ss;
+        ss << request_outcome.GetError().GetExceptionName() << request_outcome.GetError().GetMessage();
+        return new string(ss.str());
+    }
 }
 
 string* S3Upload::_upload_file(const string* filename, const string* key) {
@@ -146,16 +163,7 @@ string* S3Upload::_upload_file(const string* filename, const string* key) {
     r.SetBody(io_data);
 
     Aws::S3::Model::PutObjectOutcome o = _encryptionClient->PutObject(r);
-    delete filename;
-
-    if (o.IsSuccess()){
-        return new string("");
-    }
-    else {
-        stringstream ss;
-        ss << o.GetError().GetExceptionName() << o.GetError().GetMessage();
-        return new string(ss.str());
-    }
+    return _get_s3_request_errors(o);
 }
 
 string* S3Upload::_upload_stream(const string* stream, const string* key) {
@@ -165,16 +173,9 @@ string* S3Upload::_upload_stream(const string* stream, const string* key) {
 
     auto io_data = Aws::MakeShared<Aws::IOStream>("PutObjectInputStreamIO", stream);
     r.SetBody(io_data);
-    Aws::S3::Model::PutObjectOutcome o = _encryptionClient->PutObject(r);
 
-    if (o.IsSuccess()){
-        return new string("");
-    }
-    else {
-        stringstream ss;
-        ss << o.GetError().GetExceptionName() << o.GetError().GetMessage();
-        return new string(ss.str());
-    }
+    Aws::S3::Model::PutObjectOutcome o = _encryptionClient->PutObject(r);
+    return _get_s3_request_errors(o);
 }
 
 string* S3Upload::_download_file(const string* key) {
@@ -183,36 +184,23 @@ string* S3Upload::_download_file(const string* key) {
     r.WithKey(key->c_str());
     Aws::S3::Model::GetObjectOutcome o = _encryptionClient->GetObject(r);
 
-    if (o.IsSuccess()){
+    string* error_stream = _get_s3_request_errors(o);
+    if (_successful_s3_request(error_stream)){
         Aws::OFStream local_file;
         local_file.open(key->c_str(), std::ios::out | std::ios::binary);
         local_file << o.GetResult().GetBody().rdbuf();
-        return new string(_SUCCESSFUL_REQUEST);
     }
-    else {
-        stringstream ss;
-        ss << o.GetError().GetExceptionName() << o.GetError().GetMessage();
-        return new string(ss.str());
-    }
+
+    return error_stream;
 }
 
 string* S3Upload::_remove_file(const string* key) {
     Aws::S3::Model::DeleteObjectRequest r;
     r.WithBucket(_BUCKET->c_str());
     r.WithKey(key->c_str());
-    Aws::S3::Model::DeleteObjectOutcome o = _encryptionClient->DeleteObject(r);
 
-    if (o.IsSuccess()){
-        Aws::OFStream local_file;
-        local_file.open(key->c_str(), std::ios::out | std::ios::binary);
-        local_file << o.GetResult().GetDeleteMarker();
-        return new string(_SUCCESSFUL_REQUEST);
-    }
-    else {
-        stringstream ss;
-        ss << o.GetError().GetExceptionName() << o.GetError().GetMessage();
-        return new string(ss.str());
-    }
+    Aws::S3::Model::DeleteObjectOutcome o = _encryptionClient->DeleteObject(r);
+    return _get_s3_request_errors(o);
 }
 
 

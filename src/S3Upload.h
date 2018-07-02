@@ -7,10 +7,11 @@
 
 // IMPORTS
 #include <aws/s3-encryption/S3EncryptionClient.h>
+#include <aws/core/utils/Outcome.h>
+
 #include <string>
 #include <sstream>
 
-using namespace Aws::S3Encryption;
 using std::stringstream;
 using std::string;
 
@@ -32,7 +33,7 @@ class S3Upload {
         string* _BUCKET;
         string* _MASTER_KEY_ID;
         Aws::SDKOptions _options;
-        S3EncryptionClient* _encryptionClient;
+        Aws::S3Encryption::S3EncryptionClient* _encryptionClient;
 
         // CLASS CONSTANTS
         static const string _SUCCESSFUL_REQUEST;
@@ -42,10 +43,13 @@ class S3Upload {
         static const int _REMOVE;
 
         //class config
-        inline S3EncryptionClient* _configEncryptionClient(const string *master);
+        inline Aws::S3Encryption::S3EncryptionClient* _configEncryptionClient(const string *master);
 
         //s3 api access helpers
         bool _use_api(int op, const string* filename, const string* key);
+        inline bool _successful_s3_request(const string* requestResult);
+        inline string* _get_s3_request_errors(Aws::Utils::Outcome request_outcome);
+
         string* _upload_file(const string* filename, const string* key);
         string* _upload_stream(const string* stream, const string* key);
         string* _download_file(const string* key);
