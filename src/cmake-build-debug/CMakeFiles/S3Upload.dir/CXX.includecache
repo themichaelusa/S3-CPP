@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/michael/Downloads/S3Upload/S3Upload.cpp
+aws/s3-encryption/CryptoConfiguration.h
+-
+aws/s3-encryption/materials/KMSEncryptionMaterials.h
+-
+aws/core/auth/AWSCredentialsProviderChain.h
+-
+iostream
+-
+sstream
+-
+fstream
+-
+S3Upload.h
+/Users/michael/Downloads/S3Upload/S3Upload.h
+
+/Users/michael/Downloads/S3Upload/S3Upload.h
+aws/s3-encryption/S3EncryptionClient.h
+-
+string
+-
+
+/Users/michael/Downloads/S3Upload/main.cpp
+iostream
+-
+string
+-
+S3Upload.h
+/Users/michael/Downloads/S3Upload/S3Upload.h
+

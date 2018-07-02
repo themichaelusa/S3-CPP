@@ -2,16 +2,20 @@
 // Created by Michael Usachenko on 6/29/18.
 //
 
+using namespace Aws;
 using namespace Aws::S3;
 using namespace Aws::S3::Model;
 using namespace Aws::S3Encryption;
 using namespace Aws::S3Encryption::Materials;
 using namespace std;
 
+#include <aws/core/Aws.h>
+#include <aws/s3/model/DeleteBucketRequest.h>
 #include <aws/s3-encryption/CryptoConfiguration.h>
 #include <aws/s3-encryption/materials/KMSEncryptionMaterials.h>
 #include <aws/core/auth/AWSCredentialsProviderChain.h>
 
+#include <list>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -38,6 +42,7 @@ S3Upload::~S3Upload() {
     }
 }
 
+// CONFIG
 S3EncryptionClient* S3Upload::configEncryptionClient(const string *master){
     // get kms materials, crypto details, and aws credentials
     auto kmsMaterials = Aws::MakeShared<KMSEncryptionMaterials>("s3Encryption", master);
@@ -47,10 +52,29 @@ S3EncryptionClient* S3Upload::configEncryptionClient(const string *master){
     return new S3EncryptionClient(kmsMaterials, cryptoConfiguration, credentials);
 }
 
-bool S3Upload::_use_api(string* (*file_op) (const string*, const string*), const string* filename, const string* key){
+void S3Upload::configFnPtrMap(){
+    _FN_PTRS = new map<string, void*>();
+    _FN_PTRS->insert(make_pair("upload", &_upload_file));
+    _FN_PTRS->insert(make_pair("download", &_download_file));
+    _FN_PTRS->insert(make_pair("remove", &_download_file));
+
+}
+
+bool S3Upload::_use_api(string op, const string* filename, const string* key){
     Aws::InitAPI(_options);
     {
-        string* requestResult = file_op(filename, key);
+        string* requestResult;
+        if (op.compare("UL")){
+            requestResult = _upload_file(filename, key);
+        }
+        else if (op.compare("DL")) {
+            requestResult = _download_file(key);
+        }
+        else if (op.compare("RM")) {
+            requestResult = _remove_file(key);
+        }
+
+        //string* requestResult = _FN_PTRS->at(op)(filename, key);
         if (strcmp(requestResult->c_str(), SUCCESSFUL_REQUEST.c_str()) == 0) {
             cout << *requestResult << endl;
         } else {
@@ -96,18 +120,36 @@ string* S3Upload::_upload_file(const string* filename, const string* key) {
     }
 }
 
-string* S3Upload::_download_file(const string *filename, const string* key) {
+string* S3Upload::_download_file(const string* key) {
     Aws::S3::Model::GetObjectRequest r;
     r.WithBucket(_BUCKET->c_str());
     r.WithKey(key->c_str());
     GetObjectOutcome o = _encryptionClient->GetObject(r);
-    delete filename;
 
     if (o.IsSuccess()){
         Aws::OFStream local_file;
         local_file.open(key->c_str(), std::ios::out | std::ios::binary);
         local_file << o.GetResult().GetBody().rdbuf();
-        return new string("");
+        return new string(SUCCESSFUL_REQUEST);
+    }
+    else {
+        stringstream ss;
+        ss << o.GetError().GetExceptionName() << o.GetError().GetMessage();
+        return new string(ss.str());
+    }
+}
+
+string* S3Upload::_remove_file(const string* key) {
+    Aws::S3::Model::DeleteObjectRequest r;
+    r.WithBucket(_BUCKET->c_str());
+    r.WithKey(key->c_str());
+    DeleteObjectOutcome o = _encryptionClient->GetObject(r);
+
+    if (o.IsSuccess()){
+        Aws::OFStream local_file;
+        local_file.open(key->c_str(), std::ios::out | std::ios::binary);
+        local_file << o.GetResult().GetBody().rdbuf();
+        return new string(SUCCESSFUL_REQUEST);
     }
     else {
         stringstream ss;
