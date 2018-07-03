@@ -25,10 +25,10 @@ using namespace std;
 
 // CONSTS DEFN
 
-static const int S3Upload::_UPLOAD_FILE = 1;
-static const int S3Upload::_UPLOAD_STREAM = 2;
-static const int S3Upload::_DOWNLOAD = 3;
-static const int S3Upload::_REMOVE = 4;
+const int S3Upload::_UPLOAD_FILE = 1;
+const int S3Upload::_UPLOAD_STREAM = 2;
+const int S3Upload::_DOWNLOAD = 3;
+const int S3Upload::_REMOVE = 4;
 
 // CTORS && DTOR
 
@@ -139,7 +139,8 @@ inline bool S3Upload::_successful_s3_request(const string *requestResult) {
     return strcmp(requestResult->c_str(), _SUCCESSFUL_REQUEST.c_str()) == 0;
 }
 
-inline string* S3Upload::_get_s3_request_errors(Aws::Utils::Outcome request_outcome) {
+template <typename T>
+inline string* S3Upload::_get_s3_request_errors(T& request_outcome) {
     if (request_outcome.IsSuccess()){
         return new string(_SUCCESSFUL_REQUEST);
     }

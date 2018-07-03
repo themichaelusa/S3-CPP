@@ -51,7 +51,7 @@ class S3Upload {
         //s3 api access helpers
         bool _use_api(int op, const string* filename, const string* key);
         inline bool _successful_s3_request(const string* requestResult);
-        inline string* _get_s3_request_errors(Aws::Utils::Outcome request_outcome);
+        template <typename T> inline string* _get_s3_request_errors(T& request_outcome);
         template <typename T> inline T _init_s3_request(const string *key);
 
         string* _upload_file(const string* filename, const string* key);

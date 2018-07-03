@@ -7,6 +7,22 @@
 #IncludeRegexTransform: 
 
 /Users/michael/Downloads/S3Upload/S3Upload.cpp
+aws/core/Aws.h
+-
+aws/s3/S3Client.h
+-
+aws/s3-encryption/S3EncryptionClient.h
+-
+aws/s3/S3Request.h
+-
+aws/s3/model/GetObjectRequest.h
+-
+aws/s3/model/PutObjectRequest.h
+-
+aws/s3/model/DeleteObjectRequest.h
+-
+aws/core/utils/Outcome.h
+-
 aws/s3-encryption/CryptoConfiguration.h
 -
 aws/s3-encryption/materials/KMSEncryptionMaterials.h
@@ -25,7 +41,13 @@ S3Upload.h
 /Users/michael/Downloads/S3Upload/S3Upload.h
 aws/s3-encryption/S3EncryptionClient.h
 -
+aws/core/utils/Outcome.h
+-
+aws/s3/S3Request.h
+-
 string
+-
+sstream
 -
 
 /Users/michael/Downloads/S3Upload/main.cpp
