@@ -58,7 +58,6 @@ void S3Upload::setBucket(string *BUCKET_NAME) {
     _BUCKET = BUCKET_NAME;
 }
 
-
 // CONFIG
 inline Aws::S3Encryption::S3EncryptionClient* S3Upload::_configEncryptionClient(const string *master) {
     // get kms materials, crypto details, and aws credentials
@@ -87,9 +86,10 @@ bool S3Upload::upload(const stringstream& stream, const string& key) {
     return result;
 }
 
-bool S3Upload::download(const string& key) {
+bool S3Upload::download(const string& key, const string& path) {
     auto key_ptr = new string(key);
-    bool result = _use_api(_DOWNLOAD, nullptr, key_ptr);
+    auto path_ptr = new string(path);
+    bool result = _use_api(_DOWNLOAD, path_ptr, key_ptr);
     delete key_ptr;
     return result;
 }
@@ -114,7 +114,7 @@ bool S3Upload::_use_api(int op, const string* path_or_stream, const string* key)
             requestResult = _upload_stream(path_or_stream, key);
         }
         else if (op == _DOWNLOAD) {
-            requestResult = _download_file(key);
+            requestResult = _download_file(key, path_or_stream);
         }
         else if (op == _REMOVE) {
             requestResult = _remove_file(key);
@@ -150,7 +150,7 @@ inline string* S3Upload::_get_s3_request_errors(Aws::Utils::Outcome request_outc
     }
 }
 
-template <class T>
+template <typename T>
 inline T S3Upload::_init_s3_request(const string *key) {
     T req;
     req.WithBucket(_BUCKET->c_str());
@@ -182,14 +182,16 @@ string* S3Upload::_upload_stream(const string* stream, const string* key) {
     return _get_s3_request_errors(o);
 }
 
-string* S3Upload::_download_file(const string* key) {
+string* S3Upload::_download_file(const string* key, const string* path) {
     auto request = _init_s3_request<Aws::S3::Model::GetObjectRequest>(key);
     Aws::S3::Model::GetObjectOutcome o = _encryptionClient->GetObject(request);
     string* error_stream = _get_s3_request_errors(o);
 
     if (_successful_s3_request(error_stream)){
         Aws::OFStream local_file;
-        local_file.open(key->c_str(), std::ios::out | std::ios::binary);
+        stringstream ss;
+        ss << path->c_str() << key->c_str();
+        local_file.open(ss.str(), std::ios::out | std::ios::binary);
         local_file << o.GetResult().GetBody().rdbuf();
     }
 
