@@ -8,6 +8,7 @@
 // IMPORTS
 #include <aws/s3-encryption/S3EncryptionClient.h>
 #include <aws/core/utils/Outcome.h>
+#include <aws/s3/S3Request.h>
 
 #include <string>
 #include <sstream>
@@ -21,8 +22,10 @@ class S3Upload {
         S3Upload(string* MASTER_KEY_ID, Aws::SDKOptions options);
         ~S3Upload();
 
+        // getters/setters
         void setBucket(string* BUCKET_NAME);
 
+        // public user methods
         bool upload(const string& filename, const string& key);
         bool upload(const stringstream& stream, const string& key);
         bool download(const string& key);
@@ -49,6 +52,7 @@ class S3Upload {
         bool _use_api(int op, const string* filename, const string* key);
         inline bool _successful_s3_request(const string* requestResult);
         inline string* _get_s3_request_errors(Aws::Utils::Outcome request_outcome);
+        template <class T> inline T S3Upload::_init_s3_request(const string *key);
 
         string* _upload_file(const string* filename, const string* key);
         string* _upload_stream(const string* stream, const string* key);
