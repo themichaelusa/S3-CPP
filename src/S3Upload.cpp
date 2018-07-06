@@ -61,9 +61,9 @@ void S3Upload::setBucket(string *BUCKET_NAME) {
 // CONFIG
 inline Aws::S3Encryption::S3EncryptionClient* S3Upload::_configEncryptionClient(const string *master) {
     // get kms materials, crypto details, and aws credentials
-    auto kmsMaterials = Aws::MakeShared<Aws::S3Encryption::Materials::KMSEncryptionMaterials>("s3Encryption", master);
+    auto kmsMaterials = Aws::MakeShared<Aws::S3Encryption::Materials::KMSEncryptionMaterials>("s3Encryption", master->c_str());
     Aws::S3Encryption::CryptoConfiguration cryptoConfiguration(Aws::S3Encryption::StorageMethod::INSTRUCTION_FILE,
-                                            Aws::S3Encryption::CryptoMode::STRICT_AUTHENTICATED_ENCRYPTION);
+                                                               Aws::S3Encryption::CryptoMode::STRICT_AUTHENTICATED_ENCRYPTION);
     auto credentials = Aws::MakeShared<Aws::Auth::DefaultAWSCredentialsProviderChain>("s3Encryption");
     return new  Aws::S3Encryption::S3EncryptionClient(kmsMaterials, cryptoConfiguration, credentials);
 }
@@ -163,11 +163,8 @@ string* S3Upload::_upload_file(const string* filename, const string* key) {
     auto request = _init_s3_request<Aws::S3::Model::PutObjectRequest>(key);
 
     // Note: Binary files must also have the std::ios_base::bin flag or'ed in
-    auto input_data = Aws::MakeShared<Aws::FStream>("PutObjectInputStream",
-            filename->c_str(), std::ios_base::in | std::ios_base::binary);
-
-    auto io_data = Aws::MakeShared<Aws::IOStream>("PutObjectInputStreamIO",
-            input_data);
+    auto input_data = std::make_shared<Aws::IFStream>(filename->c_str(), std::ios_base::in | std::ios_base::binary);
+    auto io_data = std::dynamic_pointer_cast<Aws::IOStream>(input_data);
     request.SetBody(io_data);
 
     Aws::S3::Model::PutObjectOutcome o = _encryptionClient->PutObject(request);
@@ -176,7 +173,8 @@ string* S3Upload::_upload_file(const string* filename, const string* key) {
 
 string* S3Upload::_upload_stream(const string* stream, const string* key) {
     auto request = _init_s3_request<Aws::S3::Model::PutObjectRequest>(key);
-    auto io_data = Aws::MakeShared<Aws::IOStream>("PutObjectInputStreamIO", stream);
+
+    auto io_data = std::make_shared<std::stringstream>(stream->c_str());
     request.SetBody(io_data);
 
     Aws::S3::Model::PutObjectOutcome o = _encryptionClient->PutObject(request);
@@ -204,7 +202,3 @@ string* S3Upload::_remove_file(const string* key) {
     Aws::S3::Model::DeleteObjectOutcome o = _encryptionClient->DeleteObject(request);
     return _get_s3_request_errors(o);
 }
-
-
-
-
