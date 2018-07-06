@@ -21,10 +21,13 @@ using namespace std;
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <string>
+
 #include "S3Upload.h"
 
 // CONSTS DEFN
 
+const string S3Upload::_SUCCESSFUL_REQUEST;
 const int S3Upload::_UPLOAD_FILE = 1;
 const int S3Upload::_UPLOAD_STREAM = 2;
 const int S3Upload::_DOWNLOAD = 3;
